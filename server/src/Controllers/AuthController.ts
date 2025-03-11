@@ -10,133 +10,102 @@ dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "public/uploads");
-  },
-  filename: (req, file, cb) => {
-    cb(
-      null,
-      file.filename + "_" + Date.now() + path.extname(file.originalname)
-    );
-  },
-});
-
-const upload = multer({
-  storage: storage,
-});
-
 //?-----------------------------------------------------------------------------------------------
 
-/*
-!@name: getAllUsers
-!@access: Private(admin-level)
-!@desc: Get all users if your role is admin
+/* 
+!@name: register
+!@access: public
+!@desc:Controller to register user
 */
+export const register = async (req: Request, res: Response) => {
+  console.log(req.body);
+  console.log("Register Triggerred");
+  const { name, email, password } = req.body;
+  const ProfileURL = req.file ? `/uploads/${req.file.filename}` : null;
+  if (!name || !email || !password) {
+    console.log("Items not gotten");
+  } else {
+    try {
+      if (await User.findOne({ email })) {
+        res.status(400).json({ message: "Email already taken!" });
+      } else {
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
 
-export const getAllUsers = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const users = await User.find();
-    res.status(200).json(users);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+        const user = new User({
+          UserName: name,
+          UserEmail: email,
+          UserPassword: passwordHash,
+          ProfileUrl: ProfileURL,
+        });
+
+        await user.save();
+        res.status(201).json({ message: "User created successfully!!" });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: "Server error", err });
+    }
   }
 };
 
 //?--------------------------------------------------------------------------------------------------------
-
-/*
-!@name: Create Users
-!@access: Public
-!@desc: Create a new user
+/* 
+!@name: login
+!@access: public
+!@desc:Controller to log user in
 */
 
-export const createUser = async (req: Request, res: Response): Promise<any> => {
-  const { UserName, UserEmail, UserPassword } = req.body;
-
+export const login = async (req: Request, res: Response): Promise<any> => {
   try {
-    const existingUser = await User.findOne({ UserEmail });
+    const { email, password } = req.body;
 
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Please fill all required fields" });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(UserPassword, 10);
-
-    const newUser = new User({
-      UserName,
-      UserEmail,
-      UserPassword: hashedPassword,
-      Points: 0, // You can set default values as needed
-      ProfileUrl: "", // Set a default or empty URL initially
-      resetToken: "",
-      resetTokenExpiry: new Date(),
-    });
-
-    await newUser.save();
-    res.status(201).json({ message: "User created successfully", newUser });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-//?--------------------------------------------------------------------------------------------------------
-
-/*
-!@name: viewProfile
-!@access: Private (Authenticated users only)
-!@desc: Get the logged-in user's profile
-*/
-
-export const viewProfile = async (req: Request, res: Response): Promise<any> => {
-  const userId = req.userId; // Assuming userId is passed as part of JWT token in auth middleware
-
-  try {
-    const user = await User.findById(userId).select("-UserPassword"); // Don't return password
+    // Find user by email
+    const user = await User.findOne({ UserEmail: email });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res
+        .status(400)
+        .json({ message: "User not found! Please register first." });
     }
 
-    res.status(200).json(user);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-};
+    // Compare password
+    const isMatched = await bcrypt.compare(password, user.UserPassword);
+    if (!isMatched) {
+      return res.status(400).json({ message: "Invalid Credentials" });
+    }
 
-//?--------------------------------------------------------------------------------------------------------
+    // Generate JWT Token
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      return res.status(500).json({ message: "JWT Secret not found" });
+    }
 
-/*
-!@name: updateProfile
-!@access: Private (Authenticated users only)
-!@desc: Update the logged-in user's profile (including profile image)
-*/
-
-export const updateProfile = async (req: Request, res: Response):Promise<any>=> {
-  const userId = req.userId; // Assuming userId is passed as part of JWT token in auth middleware
-  const { UserName, UserEmail, ProfileUrl } = req.body;
-
-  try {
-    // Find the user and update their profile
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
+    const token = jwt.sign(
+      { id: user._id, email: user.UserEmail },
+      JWT_SECRET,
       {
-        UserName,
-        UserEmail,
-        ProfileUrl: req.file?.path || ProfileUrl, // Handle file upload
+        expiresIn: "1d",
+      }
+    );
+
+    res.status(200).json({
+      message: "Login Successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.UserName,
+        email: user.UserEmail,
+        profile: user.ProfileUrl,
       },
-      { new: true } // Return the updated user
-    ).select("-UserPassword"); // Don't return password
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json(updatedUser);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    });
+  } catch (err) {
+    console.error("Login Error:", err);
+    res.status(500).json({ error: "Server error", err });
   }
 };
-
-export { upload };

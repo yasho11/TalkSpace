@@ -1,27 +1,38 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
-const protect = (
-  req: Request,
+dotenv.config();
+
+// Extend Request type to include userId
+interface AuthenticatedRequest extends Request {
+  userId?: string;
+}
+
+export const protect = async (
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-): Promise<void> => {
-  const token = req.header("Authorization");
-
-  if (!token) {
-    res.status(401).json({ message: "No token, authorization denied" });
-    return Promise.resolve();
-  }
-
+): Promise<any> => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
-    req.userId = decoded.userId;
+    const token = req.headers.authorization?.split(" ")[1]; // Extract token after "Bearer "
+
+    if (!token) {
+      return res
+        .status(401)
+        .json({ message: "No token, authorization denied" });
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      return res.status(500).json({ message: "JWT Secret not found" });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
+    req.userId = decoded.id;
+
     next();
-    return Promise.resolve();
   } catch (err) {
     res.status(401).json({ message: "Token is not valid" });
   }
-  return Promise.resolve();
 };
-
-export { protect };
