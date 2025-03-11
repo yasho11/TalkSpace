@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../axios/axios";
 
+import { connectSocket } from "../../socket";
+
 function Login() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -16,6 +18,7 @@ function Login() {
       });
       if (response.data.token) {
         localStorage.setItem("jwt", response.data.token);
+        connectSocket();
       } else {
         console.log("Login failed");
       }
