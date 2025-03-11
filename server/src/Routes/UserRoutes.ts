@@ -1,23 +1,19 @@
 import express from "express";
-import {
-  viewProfile,
-  updateProfile,
-  createUser,
-  getAllUsers,
-  upload,
-} from "../Controllers/AuthController";
+import { register, login } from "../Controllers/AuthController";
 import { protect } from "../Middleware/VerifyToken"; // Protect middleware for authorization
-
+import upload from "../Middleware/MulterConfig";
 const router = express.Router();
 
 // Public Route: Create User
-router.post("/create", createUser);
+router.post(
+  "/register",
+  upload.single("profile"),
+  (req, res, next) => {
+    console.log("File uploaded:", req.file); // Log file details
+    next();
+  },
+  register
+);
 
-// Protected Routes
-router.get("/profile", protect, viewProfile); // View Profile
-router.put("/profile", protect, upload.single("profileImage"), updateProfile); // Update Profile
-
-// Admin Route: Get All Users
-router.get("/users", protect, getAllUsers);
-
+router.post("/login", login);
 export default router;
