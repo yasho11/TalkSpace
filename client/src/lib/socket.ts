@@ -6,12 +6,17 @@ export const socket = io(SOCKET_URL, {
   autoConnect: false,
 });
 
+
+
 export const connectSocket = () => {
   if (!socket.connected) {
     socket.connect();
     console.log("Socket connected");
   }
 };
+
+
+
 
 export const disconnectSocket = () => {
   if (socket.connected) {

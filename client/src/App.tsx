@@ -1,57 +1,34 @@
 
-import { useEffect } from "react";
-import {socket, connectSocket, disconnectSocket} from "./lib/socket";
-import { BrowserRouter as Router, Route, Routes, useLocation } from "react-router-dom";
+import { Routes, Route} from "react-router-dom";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+import Homepage from "./pages/HomePage";
+import NavBar from "./components/NavBar";
+import SettingsPage from "./pages/SettingsPage";
+import ProfilePage from "./pages/ProfilePage";
 function App(){
   
-  useEffect(()=>{
-    connectSocket();
-
-    socket.on("receive-message", (message)=>{
-      console.log("New Message:", message);
-    });
-
-    return()=>{
-      disconnectSocket();
-    }
-
-  },[])
   
-
-  
-  
-  const Layout =() =>{
-    const location = useLocation();
-
-    const noSideBarRoutes = ["/login", "/register"];
-
-    const shouldShowSideBar = !noSideBarRoutes.includes(location.pathname);
-
-
-
-
-    return(
-      <div className="MainContainer">
-        <div className="sidebar">
-
-        </div>
-        <div className="display">
-         <Routes>
-            <Route path= '/register' element = {<Register/>}/>
-            <Route path= '/login' element = {<Login/>}/>
-          </Routes>
-        </div>
-      </div>
-    )
-  }
 return(
-  <Router>
-    <Layout/>
-  </Router>
+  
+  <div>
+
+  <NavBar/>
+
+  <Routes>
+    <Route path="/" element={<Login/>}/>
+    <Route path = "/login" element={<Login/>}/>
+    <Route path = "/signup" element={<Register/>}/>
+    <Route path = "/home" element={<Homepage/>}/>
+    <Route path = "/setting" element={<SettingsPage/>}/>
+    <Route path = "/profile" element={<ProfilePage/>}/>
+  </Routes>
+
+  </div>
+  
+  
+
 )
+
 }
-
-
 export default App;

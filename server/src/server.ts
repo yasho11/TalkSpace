@@ -6,11 +6,10 @@ import dotenv from "dotenv";
 import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { io,server,app } from "./socket";
+import { io, server, app } from "./socket";
 dotenv.config();
 
 const port = process.env.PORT;
-
 
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
@@ -49,12 +48,3 @@ io.on("connection", (socket) => {
     console.log(`User disconnected: ${socket.id}`);
   });
 });
-
-// Start the server
-if (port) {
-  server.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-  });
-} else {
-  console.log("PORT not found");
-}

@@ -5,7 +5,7 @@ import {
   getUsers,
 } from "../Controllers/MessageController"; // Import the controller functions
 import { verifyToken } from "../Middleware/VerifyToken";
-import upload from "../Middleware/Message.multerconfig";
+import upload from "../Middleware/auth.MulterConfig";
 const router = express.Router();
 
 router.post(
@@ -19,6 +19,6 @@ router.post(
   sendMessage
 );
 router.get("/get/:id", verifyToken, getMessages);
-router.get(":/getusers", verifyToken, getUsers);
+router.get("/getusers", verifyToken, getUsers);
 
 export default router;

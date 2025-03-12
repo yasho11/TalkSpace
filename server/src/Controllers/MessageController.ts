@@ -2,6 +2,8 @@ import { ObjectId } from "mongoose";
 import Message from "../Models/Message";
 import { Request, Response } from "express-serve-static-core";
 import User from "../Models/User";
+import { getReceiverSocketId } from "../socket";
+import { io } from "../socket";
 
 interface CustomRequest extends Request {
   id?: ObjectId;
@@ -39,6 +41,12 @@ export const sendMessage = async (req: CustomRequest, res: Response) => {
 
       await message.save();
 
+      //Real time communication
+      const ReceiverSocketId = getReceiverSocketId(id);
+
+      if (ReceiverSocketId) {
+        io.to(ReceiverSocketId).emit("newMessage", message);
+      }
       res.status(201).json({ Notice: "Message create successfully", message });
     } catch (error) {
       console.log("Problem in the sendMessage controller");

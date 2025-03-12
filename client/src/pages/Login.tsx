@@ -15,7 +15,7 @@ function Login() {
     try {
       const response = await loginUser({ email, password });
       console.log(response.message);
-      navigate("/dashboard"); // Redirect to dashboard after login
+      navigate("/home"); // Redirect to dashboard after login
     } catch (error) {
       console.error(error);
     }

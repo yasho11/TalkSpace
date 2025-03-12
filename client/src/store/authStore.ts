@@ -1,11 +1,13 @@
-import api from "../lib/axios";
 import { create } from "zustand";
 import { io, Socket } from "socket.io-client";
+import api from "../lib/axios";
+import useChatStore from "./chatStore";
 
 // Define the shape of your store's state
 interface AuthStore {
   socket: Socket | null;
-  authUser: boolean | null;
+  authUser: { _id: string } | null;
+  onlineUsers: string[] | null;
   checkAuth: () => Promise<boolean>;
   registerUser: (data: RegisterData) => Promise<any>;
   loginUser: (data: LoginData) => Promise<any>;
@@ -32,13 +34,12 @@ const Base_URL = "http://localhost:1256";
 const useauthStore = create<AuthStore>((set, get) => ({
   socket: null,
   authUser: null,
+  onlineUsers: null,
 
   checkAuth: async () => {
     if (localStorage.getItem("token")) {
-      set({ authUser: true });
       return true;
     } else {
-      set({ authUser: false });
       return false;
     }
   },
@@ -70,8 +71,8 @@ const useauthStore = create<AuthStore>((set, get) => ({
       // Store token in localStorage
       localStorage.setItem("token", response.data.token);
 
-      // After successful login, check if user is authenticated
-      set({ authUser: true });
+      // Set authUser after login
+      set({ authUser: response.data.user });
 
       // Connect to the socket after login
       get().connectSocket();
@@ -84,20 +85,31 @@ const useauthStore = create<AuthStore>((set, get) => ({
 
   logout: async () => {
     localStorage.removeItem("token");
-
-    // Call disconnectSocket to ensure socket is disconnected
+ 
+    // Unsubscribe from messages before disconnecting socket
+    useChatStore.getState().unsubscribedFromMessages();
+ 
     get().disconnectSocket();
-
-    // Set authUser to null after logout
+ 
     set({ authUser: null });
-  },
+ },
+ 
 
   connectSocket: () => {
     const { authUser } = get(); // Access the authUser state
 
-    if (authUser || get().socket?.connected) {
-      const socket = io(Base_URL);
-      set({ socket });
+    if (authUser && !get().socket) {
+      const socket = io(Base_URL, {
+        query: {
+          userId: authUser._id,
+        },
+      });
+      set({ socket: socket });
+
+      socket.on("getOnlineUsers", (userIds: string[]) => {
+        set({ onlineUsers: userIds });
+      });
+
       socket.connect();
     }
   },
