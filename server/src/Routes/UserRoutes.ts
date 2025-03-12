@@ -1,7 +1,6 @@
 import express from "express";
 import { register, login } from "../Controllers/AuthController";
-import { protect } from "../Middleware/VerifyToken"; // Protect middleware for authorization
-import upload from "../Middleware/MulterConfig";
+import upload from "../Middleware/auth.MulterConfig";
 const router = express.Router();
 
 // Public Route: Create User

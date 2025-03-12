@@ -1,32 +1,25 @@
 import express, { Response, Request } from "express";
 import mongoose from "mongoose";
 import UserRoutes from "./Routes/UserRoutes";
+import MessageRoutes from "./Routes/MessageRoutes"; // Import the message routes
 import dotenv from "dotenv";
 import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { disconnect } from "process";
+import { io,server,app } from "./socket";
 dotenv.config();
 
-const app = express();
 const port = process.env.PORT;
 
-const server = createServer(app);
-
-const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST"],
-  },
-});
 
 app.use(cors({ origin: "http://localhost:5173" }));
-
 app.use(express.json());
 app.use(express.static("public"));
 
 app.use("/auth", UserRoutes);
+app.use("/messages", MessageRoutes); // Use the message routes
 
+// MongoDB connection
 const mongoURI = process.env.MONGO_URI;
 if (mongoURI) {
   mongoose
@@ -34,33 +27,31 @@ if (mongoURI) {
     .then(() => {
       console.log("Connected to MongoDB");
     })
-    .catch((err) => console.error("Couldnt connect to MongoDB", err));
+    .catch((err) => console.error("Couldn't connect to MongoDB", err));
 } else {
-  console.log("Couldnt process mongodb uri from dotenv");
+  console.log("Couldn't process MongoDB URI from dotenv");
 }
 
+// Handle socket.io connections and events
 io.on("connection", (socket) => {
   console.log(`New user connected: ${socket.id}`);
 
-  socket.on("Send-message", (message) => {
-    console.log(`Message Received: ${message}`);
+  // Listening for incoming messages
+  socket.on("send-message", (message) => {
+    console.log(`Message received: ${message}`);
 
+    // Emit the message to all clients (or to specific receiver if needed)
     io.emit("receive-message", message);
   });
 
-  socket.on("disconnect", ()=>{
+  // Handle user disconnect
+  socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
-  })
-
+  });
 });
 
-
-
-
-
-
+// Start the server
 if (port) {
-  //Listening to port
   server.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
   });

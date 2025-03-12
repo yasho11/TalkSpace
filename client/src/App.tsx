@@ -1,9 +1,9 @@
 
 import { useEffect } from "react";
-import {socket, connectSocket, disconnectSocket} from "./socket";
+import {socket, connectSocket, disconnectSocket} from "./lib/socket";
 import { BrowserRouter as Router, Route, Routes, useLocation } from "react-router-dom";
-import Register from "./components/Auth/Register";
-import Login from "./components/Auth/Login";
+import Register from "./pages/Register";
+import Login from "./pages/Login";
 function App(){
   
   useEffect(()=>{

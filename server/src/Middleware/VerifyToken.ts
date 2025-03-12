@@ -1,38 +1,51 @@
-import { Request, Response, NextFunction } from "express";
+import { NextFunction, Response, Request } from "express";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { ObjectId } from "mongodb";
 
 dotenv.config();
+const JWT_SECRET = process.env.JWT_SECRET;
 
-// Extend Request type to include userId
-interface AuthenticatedRequest extends Request {
-  userId?: string;
+interface CustomRequest extends Request {
+  UserEmail?: string;
+  id?: ObjectId;
 }
 
-export const protect = async (
-  req: AuthenticatedRequest,
+interface JWTPayload {
+  email: string;
+  id?: ObjectId;
+}
+export const verifyToken = async (
+  req: CustomRequest,
   res: Response,
   next: NextFunction
-): Promise<any> => {
+): Promise<void> => {
+  const token = req.headers["authorization"]?.split(" ")[1];
+
+  if (!token) {
+    res.status(401).json({ message: "Token required" });
+    return;
+  }
+
+  console.log("Received token: ", token);
+
   try {
-    const token = req.headers.authorization?.split(" ")[1]; // Extract token after "Bearer "
+    if (JWT_SECRET) {
+      const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+      console.log("Decoded Payload: ", decoded);
 
-    if (!token) {
-      return res
-        .status(401)
-        .json({ message: "No token, authorization denied" });
+      // Convert the string `id` to ObjectId
+      req.id = new ObjectId(decoded.id); // This ensures `req.id` is an ObjectId
+      req.UserEmail = decoded.email;
+
+      console.log("Middleware set req.id to:", req.id); // Debug log
+      next();
+    } else {
+      res.status(400).json("Secret not found");
     }
-
-    const JWT_SECRET = process.env.JWT_SECRET;
-    if (!JWT_SECRET) {
-      return res.status(500).json({ message: "JWT Secret not found" });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
-    req.userId = decoded.id;
-
-    next();
-  } catch (err) {
-    res.status(401).json({ message: "Token is not valid" });
+  } catch (error) {
+    console.error("JWT verification error: ", error);
+    res.status(403).json({ message: "Invalid or expired token" });
+    return;
   }
 };
